@@ -21,6 +21,7 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     clean-disabled: false
+    clean-on-validation-error: true
 
 groq:
   api:
