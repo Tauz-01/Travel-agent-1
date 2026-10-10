@@ -7,7 +7,7 @@ INSERT INTO operators (id, code, name, contact_number, rating, on_time_performan
 
 -- Seed Vehicles
 INSERT INTO vehicles (id, operator_id, registration_number, bus_type, capacity, manufacture_year, has_wifi, has_charging_point, is_active) VALUES
-('a1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'AP39Z1001', 'SUPER_LUXURY', 36, 2022, false, true, true),
+('a1111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', 'AP39Z1001', 'SUPER_LUXURY', 36, 2022, true, true, true),
 ('a2222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'AP39Z1002', 'GARUDA_PLUS', 40, 2023, true, true, true),
 ('a3333333-3333-3333-3333-333333333333', '33333333-3333-3333-3333-333333333333', 'AP39TV3003', 'AC_SLEEPER', 30, 2023, true, true, true);
 
