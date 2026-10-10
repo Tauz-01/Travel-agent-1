@@ -1,11 +1,13 @@
 package com.roamagent.agent;
 
 import com.roamagent.client.GroqApiClient;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+@Getter
 public class ConversationAgent {
     private final GroqApiClient groqApiClient;
 

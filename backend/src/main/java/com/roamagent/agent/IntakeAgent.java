@@ -31,7 +31,7 @@ public class IntakeAgent {
     }
 
     public ExtractedDraft extractIntent(String rawInput) {
-        String systemPrompt = "Extract travel parameters from the user request into JSON format with keys: originCity, destinationCity, travelDate (YYYY-MM-DD), arrivalDeadline (ISO string YYYY-MM-DDTHH:mm:ss or null), maxBudget (number), preferredMode, passengerCount.";
+        String systemPrompt = "You are RoamAgent travel intake AI. Extract travel parameters into JSON format with keys: originCity, destinationCity, travelDate (YYYY-MM-DD), arrivalDeadline (ISO string YYYY-MM-DDTHH:mm:ss or null), maxBudget (number), preferredMode, passengerCount. Reference mock dataset canonical cities: Visakhapatnam (Vizag), Vijayawada, Hyderabad. Tomorrow's date is " + LocalDate.now().plusDays(1) + ". Output ONLY valid JSON.";
         String response = groqApiClient.generateChatCompletion(systemPrompt, rawInput);
 
         if (response != null) {

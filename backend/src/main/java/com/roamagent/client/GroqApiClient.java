@@ -3,10 +3,13 @@ package com.roamagent.client;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
@@ -42,6 +45,11 @@ public class GroqApiClient {
         }
     }
 
+    @Data
+    public static class TranscriptionResponse {
+        private String text;
+    }
+
     public String generateChatCompletion(String systemPrompt, String userMessage) {
         if (apiKey == null || apiKey.trim().isEmpty() || "test-key".equals(apiKey)) {
             return null; // Fallback signal
@@ -69,6 +77,40 @@ public class GroqApiClient {
             }
         } catch (Exception e) {
             // Log & fallback to template/regex
+        }
+        return null;
+    }
+
+    public String transcribeAudio(byte[] audioBytes, String filename) {
+        if (apiKey == null || apiKey.trim().isEmpty() || "test-key".equals(apiKey) || audioBytes == null || audioBytes.length == 0) {
+            return null;
+        }
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+            headers.setBearerAuth(apiKey);
+
+            ByteArrayResource fileResource = new ByteArrayResource(audioBytes) {
+                @Override
+                public String getFilename() {
+                    return filename != null ? filename : "audio.m4a";
+                }
+            };
+
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("file", fileResource);
+            body.add("model", "whisper-large-v3-turbo");
+            body.add("response_format", "json");
+
+            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+            TranscriptionResponse response = restTemplate.postForObject(baseUrl + "/audio/transcriptions", requestEntity, TranscriptionResponse.class);
+
+            if (response != null && response.getText() != null) {
+                return response.getText().trim();
+            }
+        } catch (Exception e) {
+            // Fallback signal
         }
         return null;
     }
