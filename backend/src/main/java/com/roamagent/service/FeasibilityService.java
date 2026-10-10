@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -15,7 +15,7 @@ public class FeasibilityService {
 
     public static final int MIN_TRANSFER_BUFFER_MINUTES = 45;
 
-    public boolean isFeasible(RouteCandidate candidate, OffsetDateTime arrivalDeadline, BigDecimal maxBudget) {
+    public boolean isFeasible(RouteCandidate candidate, LocalDateTime arrivalDeadline, BigDecimal maxBudget) {
         // 1. Budget check
         if (maxBudget != null && candidate.getTotalFare().compareTo(maxBudget) > 0) {
             return false;
@@ -23,7 +23,7 @@ public class FeasibilityService {
 
         // 2. Arrival Deadline check
         if (arrivalDeadline != null) {
-            OffsetDateTime finalArrival = candidate.getLegs().get(candidate.getLegs().size() - 1).getArrivalTime();
+            LocalDateTime finalArrival = candidate.getLegs().get(candidate.getLegs().size() - 1).getArrivalTime();
             if (finalArrival.isAfter(arrivalDeadline)) {
                 return false;
             }
@@ -32,8 +32,8 @@ public class FeasibilityService {
         // 3. Transfer Buffer check
         List<RouteLeg> legs = candidate.getLegs();
         for (int i = 0; i < legs.size() - 1; i++) {
-            OffsetDateTime arr = legs.get(i).getArrivalTime();
-            OffsetDateTime dep = legs.get(i + 1).getDepartureTime();
+            LocalDateTime arr = legs.get(i).getArrivalTime();
+            LocalDateTime dep = legs.get(i + 1).getDepartureTime();
             long bufferMinutes = Duration.between(arr, dep).toMinutes();
 
             if (bufferMinutes < MIN_TRANSFER_BUFFER_MINUTES) {
@@ -44,7 +44,7 @@ public class FeasibilityService {
         return true;
     }
 
-    public List<RouteCandidate> filterFeasible(List<RouteCandidate> candidates, OffsetDateTime arrivalDeadline, BigDecimal maxBudget) {
+    public List<RouteCandidate> filterFeasible(List<RouteCandidate> candidates, LocalDateTime arrivalDeadline, BigDecimal maxBudget) {
         return candidates.stream()
                 .filter(c -> isFeasible(c, arrivalDeadline, maxBudget))
                 .collect(Collectors.toList());

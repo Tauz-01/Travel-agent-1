@@ -2,15 +2,15 @@ package com.roamagent.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.OffsetDateTime;
-import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "journey_events")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class JourneyEvent {
     @Id
-    private UUID id;
+    @Column(length = 36)
+    private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "itinerary_id", nullable = false)
@@ -23,5 +23,5 @@ public class JourneyEvent {
     private String payload;
 
     @Column(name = "timestamp", insertable = false, updatable = false)
-    private OffsetDateTime timestamp;
+    private LocalDateTime timestamp;
 }

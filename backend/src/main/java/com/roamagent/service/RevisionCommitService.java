@@ -3,7 +3,6 @@ package com.roamagent.service;
 import com.roamagent.dto.ApiDtos.ApproveRevisionResponse;
 import com.roamagent.entity.AuditRecord;
 import com.roamagent.entity.Itinerary;
-import com.roamagent.entity.RecoveryProposal;
 import com.roamagent.repository.AuditRecordRepository;
 import com.roamagent.repository.ItineraryRepository;
 import com.roamagent.repository.RecoveryProposalRepository;
@@ -11,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -23,7 +22,7 @@ public class RevisionCommitService {
     private final AuditRecordRepository auditRecordRepository;
 
     @Transactional
-    public ApproveRevisionResponse approveRevision(UUID itineraryId, UUID proposalId) {
+    public ApproveRevisionResponse approveRevision(String itineraryId, String proposalId) {
         Itinerary itinerary = itineraryRepository.findById(itineraryId)
                 .orElse(Itinerary.builder()
                         .id(itineraryId)
@@ -40,7 +39,7 @@ public class RevisionCommitService {
         }
 
         AuditRecord auditRecord = AuditRecord.builder()
-                .id(UUID.randomUUID())
+                .id(UUID.randomUUID().toString())
                 .itinerary(itinerary)
                 .actionType("RECOVERY_APPROVAL")
                 .previousRevisionNumber(prevRev)
@@ -54,7 +53,7 @@ public class RevisionCommitService {
                 .itineraryId(itineraryId)
                 .newRevisionNumber(newRev)
                 .status("REVISION_COMMITTED")
-                .activeEta(OffsetDateTime.now().plusHours(5))
+                .activeEta(LocalDateTime.now().plusHours(5))
                 .auditRecordId(auditRecord.getId())
                 .message("Itinerary updated successfully. Monitoring resumed for revised route.")
                 .build();

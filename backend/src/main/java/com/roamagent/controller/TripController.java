@@ -28,9 +28,12 @@ public class TripController {
         var draft = orchestratorService.getIntakeAgent().extractIntent(request.getRawInput());
         var clarification = orchestratorService.getClarificationAgent().evaluateDraft(draft);
 
+        String intentId = UUID.randomUUID().toString();
+        String convId = request.getConversationId() != null ? request.getConversationId() : UUID.randomUUID().toString();
+
         TripIntent savedIntent = TripIntent.builder()
-                .id(UUID.randomUUID())
-                .conversationId(request.getConversationId() != null ? request.getConversationId() : UUID.randomUUID())
+                .id(intentId)
+                .conversationId(convId)
                 .originCity(draft.getOriginCity())
                 .destinationCity(draft.getDestinationCity())
                 .travelDate(draft.getTravelDate())

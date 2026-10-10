@@ -5,8 +5,7 @@ import com.roamagent.service.GraphNetworkService.RouteLeg;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -17,7 +16,7 @@ class FeasibilityServiceTest {
 
     @Test
     void testTransferBufferEnforcement() {
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        LocalDateTime now = LocalDateTime.now();
 
         // Buffer = 30 mins (< 45 mins) -> Should be REJECTED
         RouteLeg leg1 = RouteLeg.builder().arrivalTime(now.plusHours(2)).build();
@@ -42,7 +41,7 @@ class FeasibilityServiceTest {
 
     @Test
     void testBudgetCapEnforcement() {
-        RouteLeg leg1 = RouteLeg.builder().arrivalTime(OffsetDateTime.now()).build();
+        RouteLeg leg1 = RouteLeg.builder().arrivalTime(LocalDateTime.now()).build();
         RouteCandidate candidate = RouteCandidate.builder()
                 .legs(List.of(leg1))
                 .totalFare(BigDecimal.valueOf(1600))

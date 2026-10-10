@@ -9,8 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.LocalDateTime;
 
 @Component
 @RequiredArgsConstructor
@@ -25,14 +24,14 @@ public class IntakeAgent {
         private String originCity;
         private String destinationCity;
         private LocalDate travelDate;
-        private OffsetDateTime arrivalDeadline;
+        private LocalDateTime arrivalDeadline;
         private BigDecimal maxBudget;
         private String preferredMode;
         private Integer passengerCount;
     }
 
     public ExtractedDraft extractIntent(String rawInput) {
-        String systemPrompt = "Extract travel parameters from the user request into JSON format with keys: originCity, destinationCity, travelDate (YYYY-MM-DD), arrivalDeadline (ISO8601 string or null), maxBudget (number), preferredMode, passengerCount.";
+        String systemPrompt = "Extract travel parameters from the user request into JSON format with keys: originCity, destinationCity, travelDate (YYYY-MM-DD), arrivalDeadline (ISO string YYYY-MM-DDTHH:mm:ss or null), maxBudget (number), preferredMode, passengerCount.";
         String response = groqApiClient.generateChatCompletion(systemPrompt, rawInput);
 
         if (response != null) {
@@ -47,7 +46,7 @@ public class IntakeAgent {
         String origin = rawInput.toLowerCase().contains("visakhapatnam") ? "Visakhapatnam" : "Visakhapatnam";
         String dest = rawInput.toLowerCase().contains("hyderabad") ? "Hyderabad" : "Hyderabad";
         LocalDate date = LocalDate.now().plusDays(1);
-        OffsetDateTime deadline = OffsetDateTime.of(date, java.time.LocalTime.of(9, 0), ZoneOffset.ofHoursMinutes(5, 30));
+        LocalDateTime deadline = LocalDateTime.of(date, java.time.LocalTime.of(9, 0));
         BigDecimal budget = rawInput.contains("1500") ? BigDecimal.valueOf(1500.0) : BigDecimal.valueOf(2000.0);
         String mode = rawInput.toLowerCase().contains("sleeper") ? "SLEEPER" : "NO_PREFERENCE";
 

@@ -3,14 +3,14 @@ package com.roamagent.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "service_stops")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class ServiceStop {
     @Id
-    private UUID id;
+    @Column(length = 36)
+    private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bus_service_id", nullable = false)

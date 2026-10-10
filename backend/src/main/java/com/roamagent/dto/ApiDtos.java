@@ -4,15 +4,14 @@ import lombok.Builder;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 public class ApiDtos {
 
     @Data
     public static class ExtractIntentRequest {
-        private UUID conversationId;
+        private String conversationId;
         private String rawInput;
         private String userLanguage;
     }
@@ -20,7 +19,7 @@ public class ApiDtos {
     @Data
     @Builder
     public static class ExtractIntentResponse {
-        private UUID intentId;
+        private String intentId;
         private String status;
         private DraftIntentDto draftIntent;
         private List<String> missingFields;
@@ -33,7 +32,7 @@ public class ApiDtos {
         private String originCity;
         private String destinationCity;
         private LocalDate travelDate;
-        private OffsetDateTime arrivalDeadline;
+        private LocalDateTime arrivalDeadline;
         private BigDecimal maxBudget;
         private String preferredMode;
         private Integer passengerCount;
@@ -49,7 +48,7 @@ public class ApiDtos {
 
     @Data
     public static class SearchItinerariesRequest {
-        private UUID intentId;
+        private String intentId;
         private Integer minTransferBufferMinutes;
         private Boolean allowMultiLeg;
     }
@@ -57,7 +56,7 @@ public class ApiDtos {
     @Data
     @Builder
     public static class SearchItinerariesResponse {
-        private UUID intentId;
+        private String intentId;
         private Integer totalOptionsFound;
         private List<ItineraryOptionDto> itineraries;
     }
@@ -65,7 +64,7 @@ public class ApiDtos {
     @Data
     @Builder
     public static class ItineraryOptionDto {
-        private UUID itineraryId;
+        private String itineraryId;
         private Integer rankingPosition;
         private BigDecimal totalFare;
         private Integer totalDurationMinutes;
@@ -85,31 +84,31 @@ public class ApiDtos {
         private String busType;
         private String fromStopName;
         private String toStopName;
-        private OffsetDateTime scheduledDeparture;
-        private OffsetDateTime scheduledArrival;
+        private LocalDateTime scheduledDeparture;
+        private LocalDateTime scheduledArrival;
         private BigDecimal fare;
     }
 
     @Data
     public static class TriggerScenarioRequest {
-        private UUID activeItineraryId;
+        private String activeItineraryId;
         private String scenarioCode;
         private Integer simulatedDelayMinutes;
     }
 
     @Data
     public static class ApproveRevisionRequest {
-        private UUID proposalId;
+        private String proposalId;
     }
 
     @Data
     @Builder
     public static class ApproveRevisionResponse {
-        private UUID itineraryId;
+        private String itineraryId;
         private Integer newRevisionNumber;
         private String status;
-        private OffsetDateTime activeEta;
-        private UUID auditRecordId;
+        private LocalDateTime activeEta;
+        private String auditRecordId;
         private String message;
     }
 }

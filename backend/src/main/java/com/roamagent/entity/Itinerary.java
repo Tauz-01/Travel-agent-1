@@ -3,17 +3,17 @@ package com.roamagent.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Table(name = "itineraries")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Itinerary {
     @Id
-    private UUID id;
+    @Column(length = 36)
+    private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trip_intent_id", nullable = false)
@@ -39,7 +39,7 @@ public class Itinerary {
     private Integer currentRevisionNumber;
 
     @Column(name = "created_at", insertable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "itinerary", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default

@@ -3,14 +3,14 @@ package com.roamagent.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Entity
 @Table(name = "fare_records")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class FareRecord {
     @Id
-    private UUID id;
+    @Column(length = 36)
+    private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bus_service_id", nullable = false)

@@ -8,8 +8,7 @@ import com.roamagent.service.GraphNetworkService.RouteLeg;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,7 +18,7 @@ class BackendVerificationTest {
     @Test
     void testFeasibilityCheck() {
         FeasibilityService service = new FeasibilityService();
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        LocalDateTime now = LocalDateTime.now();
 
         RouteLeg leg1 = RouteLeg.builder().arrivalTime(now.plusHours(2)).build();
         RouteLeg leg2 = RouteLeg.builder().departureTime(now.plusHours(2).plusMinutes(30)).build();

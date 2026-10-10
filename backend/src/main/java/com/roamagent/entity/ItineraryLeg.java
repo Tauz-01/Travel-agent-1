@@ -3,15 +3,15 @@ package com.roamagent.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "itinerary_legs")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class ItineraryLeg {
     @Id
-    private UUID id;
+    @Column(length = 36)
+    private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "itinerary_id", nullable = false)
@@ -33,12 +33,12 @@ public class ItineraryLeg {
     private Stop toStop;
 
     @Column(nullable = false)
-    private OffsetDateTime scheduledDeparture;
+    private LocalDateTime scheduledDeparture;
 
     @Column(nullable = false)
-    private OffsetDateTime scheduledArrival;
+    private LocalDateTime scheduledArrival;
 
-    private OffsetDateTime projectedArrival;
+    private LocalDateTime projectedArrival;
 
     @Column(nullable = false)
     private BigDecimal legFare;

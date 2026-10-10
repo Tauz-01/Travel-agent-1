@@ -2,15 +2,15 @@ package com.roamagent.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.OffsetDateTime;
-import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "audit_records")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class AuditRecord {
     @Id
-    private UUID id;
+    @Column(length = 36)
+    private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "itinerary_id", nullable = false)
@@ -29,5 +29,5 @@ public class AuditRecord {
     private String changeSummary;
 
     @Column(name = "committed_at", insertable = false, updatable = false)
-    private OffsetDateTime committedAt;
+    private LocalDateTime committedAt;
 }

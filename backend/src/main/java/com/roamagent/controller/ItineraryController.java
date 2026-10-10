@@ -1,7 +1,6 @@
 package com.roamagent.controller;
 
 import com.roamagent.dto.ApiDtos.*;
-import com.roamagent.entity.Itinerary;
 import com.roamagent.entity.TripIntent;
 import com.roamagent.repository.ItineraryRepository;
 import com.roamagent.repository.TripIntentRepository;
@@ -60,7 +59,7 @@ public class ItineraryController {
             }
 
             options.add(ItineraryOptionDto.builder()
-                    .itineraryId(UUID.randomUUID())
+                    .itineraryId(UUID.randomUUID().toString())
                     .rankingPosition(pos++)
                     .totalFare(c.getTotalFare())
                     .totalDurationMinutes(c.getTotalDurationMinutes())
@@ -80,22 +79,22 @@ public class ItineraryController {
     }
 
     @PostMapping("/{id}/select")
-    public Map<String, Object> selectItinerary(@PathVariable UUID id) {
+    public Map<String, Object> selectItinerary(@PathVariable String id) {
         return Map.of("itineraryId", id, "status", "AWAITING_DEMO_CONFIRMATION");
     }
 
     @PostMapping("/{id}/checkout")
-    public Map<String, Object> checkoutItinerary(@PathVariable UUID id) {
+    public Map<String, Object> checkoutItinerary(@PathVariable String id) {
         return Map.of("itineraryId", id, "status", "ACTIVE", "paymentStatus", "DEMO_CONFIRMED");
     }
 
     @PostMapping("/{id}/revisions/approve")
-    public ApproveRevisionResponse approveRevision(@PathVariable UUID id, @RequestBody ApproveRevisionRequest request) {
+    public ApproveRevisionResponse approveRevision(@PathVariable String id, @RequestBody ApproveRevisionRequest request) {
         return revisionCommitService.approveRevision(id, request.getProposalId());
     }
 
     @PostMapping("/{id}/revisions/reject")
-    public Map<String, Object> rejectRevision(@PathVariable UUID id) {
+    public Map<String, Object> rejectRevision(@PathVariable String id) {
         return Map.of("itineraryId", id, "status", "REJECTED_ACTIVE_PRESERVED");
     }
 }

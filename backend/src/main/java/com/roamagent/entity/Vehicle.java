@@ -2,14 +2,14 @@ package com.roamagent.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.util.UUID;
 
 @Entity
 @Table(name = "vehicles")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Vehicle {
     @Id
-    private UUID id;
+    @Column(length = 36)
+    private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "operator_id", nullable = false)

@@ -17,8 +17,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.*;
 
 @Service
@@ -30,8 +28,6 @@ public class GraphNetworkService {
     private final BusServiceRepository busServiceRepository;
     private final FareRecordRepository fareRecordRepository;
 
-    private static final ZoneOffset IST_OFFSET = ZoneOffset.ofHoursMinutes(5, 30);
-
     @Data
     @Builder
     @AllArgsConstructor
@@ -39,8 +35,8 @@ public class GraphNetworkService {
         private BusService busService;
         private Stop fromStop;
         private Stop toStop;
-        private OffsetDateTime departureTime;
-        private OffsetDateTime arrivalTime;
+        private LocalDateTime departureTime;
+        private LocalDateTime arrivalTime;
         private BigDecimal fare;
         private String seatType;
     }
@@ -79,8 +75,8 @@ public class GraphNetworkService {
                         ServiceStop destSS = destSSOpt.get();
 
                         if (originSS.getStopSequence() < destSS.getStopSequence()) {
-                            OffsetDateTime depTime = OffsetDateTime.of(travelDate, originSS.getScheduledDepartureTime(), IST_OFFSET).plusDays(originSS.getDayOffset());
-                            OffsetDateTime arrTime = OffsetDateTime.of(travelDate, destSS.getScheduledArrivalTime(), IST_OFFSET).plusDays(destSS.getDayOffset());
+                            LocalDateTime depTime = LocalDateTime.of(travelDate, originSS.getScheduledDepartureTime()).plusDays(originSS.getDayOffset());
+                            LocalDateTime arrTime = LocalDateTime.of(travelDate, destSS.getScheduledArrivalTime()).plusDays(destSS.getDayOffset());
 
                             BigDecimal fare = fareRecordRepository.findByBusServiceIdAndFromStopIdAndToStopId(service.getId(), origin.getId(), dest.getId())
                                     .map(FareRecord::getBaseFare)
@@ -122,8 +118,8 @@ public class GraphNetworkService {
                             ServiceStop originSS = originSSOpt.get();
                             ServiceStop hubSS1 = hubSS1Opt.get();
 
-                            OffsetDateTime leg1Dep = OffsetDateTime.of(travelDate, originSS.getScheduledDepartureTime(), IST_OFFSET).plusDays(originSS.getDayOffset());
-                            OffsetDateTime leg1Arr = OffsetDateTime.of(travelDate, hubSS1.getScheduledArrivalTime(), IST_OFFSET).plusDays(hubSS1.getDayOffset());
+                            LocalDateTime leg1Dep = LocalDateTime.of(travelDate, originSS.getScheduledDepartureTime()).plusDays(originSS.getDayOffset());
+                            LocalDateTime leg1Arr = LocalDateTime.of(travelDate, hubSS1.getScheduledArrivalTime()).plusDays(hubSS1.getDayOffset());
 
                             for (BusService s2 : allServices) {
                                 if (s1.getId().equals(s2.getId())) continue;
@@ -136,8 +132,8 @@ public class GraphNetworkService {
                                     ServiceStop hubSS2 = hubSS2Opt.get();
                                     ServiceStop destSS = destSSOpt.get();
 
-                                    OffsetDateTime leg2Dep = OffsetDateTime.of(travelDate, hubSS2.getScheduledDepartureTime(), IST_OFFSET).plusDays(hubSS2.getDayOffset());
-                                    OffsetDateTime leg2Arr = OffsetDateTime.of(travelDate, destSS.getScheduledArrivalTime(), IST_OFFSET).plusDays(destSS.getDayOffset());
+                                    LocalDateTime leg2Dep = LocalDateTime.of(travelDate, hubSS2.getScheduledDepartureTime()).plusDays(hubSS2.getDayOffset());
+                                    LocalDateTime leg2Arr = LocalDateTime.of(travelDate, destSS.getScheduledArrivalTime()).plusDays(destSS.getDayOffset());
 
                                     BigDecimal fare1 = fareRecordRepository.findByBusServiceIdAndFromStopIdAndToStopId(s1.getId(), origin.getId(), hub.getId())
                                             .map(FareRecord::getBaseFare).orElse(BigDecimal.valueOf(700.0));

@@ -4,18 +4,18 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "trip_intents")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class TripIntent {
     @Id
-    private UUID id;
+    @Column(length = 36)
+    private String id;
 
-    @Column(nullable = false)
-    private UUID conversationId;
+    @Column(nullable = false, length = 36)
+    private String conversationId;
 
     @Column(nullable = false)
     private String originCity;
@@ -26,7 +26,7 @@ public class TripIntent {
     @Column(nullable = false)
     private LocalDate travelDate;
 
-    private OffsetDateTime arrivalDeadline;
+    private LocalDateTime arrivalDeadline;
     private BigDecimal maxBudget;
     private String preferredMode;
     private Integer passengerCount;
@@ -34,5 +34,5 @@ public class TripIntent {
     private Boolean isClarified;
 
     @Column(name = "created_at", insertable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
 }

@@ -6,7 +6,7 @@ import lombok.Data;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -17,9 +17,9 @@ public class DisruptionRecoveryAgent {
     public static class RecoveryResult {
         private boolean disruptionTriggered;
         private Integer affectedLegSequence;
-        private OffsetDateTime originalProjectedArrival;
-        private OffsetDateTime newProjectedArrival;
-        private OffsetDateTime nextLegDeparture;
+        private LocalDateTime originalProjectedArrival;
+        private LocalDateTime newProjectedArrival;
+        private LocalDateTime nextLegDeparture;
         private long effectiveRemainingBufferMinutes;
         private long requiredBufferMinutes;
         private String impactStatus;
@@ -31,15 +31,15 @@ public class DisruptionRecoveryAgent {
     public static class ProposalPayload {
         private String proposalId;
         private BigDecimal fareDifference;
-        private OffsetDateTime revisedEta;
+        private LocalDateTime revisedEta;
         private String explanation;
         private List<Integer> replacedLegs;
     }
 
     public RecoveryResult evaluateDelay(Itinerary itinerary, int delayMinutes) {
-        OffsetDateTime origArr = itinerary.getLegs().get(0).getScheduledArrival();
-        OffsetDateTime newArr = origArr.plusMinutes(delayMinutes);
-        OffsetDateTime nextDep = itinerary.getLegs().get(1).getScheduledDeparture();
+        LocalDateTime origArr = itinerary.getLegs().get(0).getScheduledArrival();
+        LocalDateTime newArr = origArr.plusMinutes(delayMinutes);
+        LocalDateTime nextDep = itinerary.getLegs().get(1).getScheduledDeparture();
 
         long remainingBuffer = java.time.Duration.between(newArr, nextDep).toMinutes();
 

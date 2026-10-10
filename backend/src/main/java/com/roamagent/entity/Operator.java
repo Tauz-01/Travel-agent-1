@@ -3,15 +3,15 @@ package com.roamagent.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "operators")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Operator {
     @Id
-    private UUID id;
+    @Column(length = 36)
+    private String id;
 
     @Column(nullable = false, unique = true)
     private String code;
@@ -24,5 +24,5 @@ public class Operator {
     private BigDecimal onTimePerformancePct;
 
     @Column(name = "created_at", insertable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
 }

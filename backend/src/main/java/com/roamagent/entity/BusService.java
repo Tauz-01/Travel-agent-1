@@ -2,14 +2,14 @@ package com.roamagent.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.util.UUID;
 
 @Entity
 @Table(name = "bus_services")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class BusService {
     @Id
-    private UUID id;
+    @Column(length = 36)
+    private String id;
 
     @Column(nullable = false, unique = true)
     private String serviceNumber;
