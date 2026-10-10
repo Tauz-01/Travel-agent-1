@@ -1,0 +1,74 @@
+package com.roamagent.controller;
+
+import com.roamagent.dto.ApiDtos.*;
+import com.roamagent.entity.TripIntent;
+import com.roamagent.repository.TripIntentRepository;
+import com.roamagent.service.AgentOrchestratorService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/v1")
+@RequiredArgsConstructor
+public class TripController {
+
+    private final AgentOrchestratorService orchestratorService;
+    private final TripIntentRepository tripIntentRepository;
+
+    @GetMapping("/health")
+    public Map<String, Object> health() {
+        return Map.of("status", "UP", "service", "RoamAgent Backend", "version", "1.0.0");
+    }
+
+    @PostMapping("/trip-intent/extract")
+    public ExtractIntentResponse extractIntent(@RequestBody ExtractIntentRequest request) {
+        var draft = orchestratorService.getIntakeAgent().extractIntent(request.getRawInput());
+        var clarification = orchestratorService.getClarificationAgent().evaluateDraft(draft);
+
+        TripIntent savedIntent = TripIntent.builder()
+                .id(UUID.randomUUID())
+                .conversationId(request.getConversationId() != null ? request.getConversationId() : UUID.randomUUID())
+                .originCity(draft.getOriginCity())
+                .destinationCity(draft.getDestinationCity())
+                .travelDate(draft.getTravelDate())
+                .arrivalDeadline(draft.getArrivalDeadline())
+                .maxBudget(draft.getMaxBudget())
+                .preferredMode(draft.getPreferredMode())
+                .passengerCount(draft.getPassengerCount())
+                .languagePreference(request.getUserLanguage())
+                .isClarified(clarification.isClarified())
+                .build();
+
+        tripIntentRepository.save(savedIntent);
+
+        DraftIntentDto draftDto = DraftIntentDto.builder()
+                .originCity(draft.getOriginCity())
+                .destinationCity(draft.getDestinationCity())
+                .travelDate(draft.getTravelDate())
+                .arrivalDeadline(draft.getArrivalDeadline())
+                .maxBudget(draft.getMaxBudget())
+                .preferredMode(draft.getPreferredMode())
+                .passengerCount(draft.getPassengerCount())
+                .build();
+
+        ClarificationQuestionDto questionDto = null;
+        if (clarification.getQuestion() != null) {
+            questionDto = ClarificationQuestionDto.builder()
+                    .questionKey(clarification.getQuestion().getQuestionKey())
+                    .questionText(clarification.getQuestion().getQuestionText())
+                    .options(clarification.getQuestion().getOptions())
+                    .build();
+        }
+
+        return ExtractIntentResponse.builder()
+                .intentId(savedIntent.getId())
+                .status(clarification.isClarified() ? "CLARIFIED" : "REQUIRES_CLARIFICATION")
+                .draftIntent(draftDto)
+                .missingFields(clarification.getMissingFields())
+                .clarificationQuestion(questionDto)
+                .build();
+    }
+}
