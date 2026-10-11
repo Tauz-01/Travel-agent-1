@@ -15,7 +15,7 @@ import { AudioModule, useAudioRecorder, RecordingPresets } from 'expo-audio';
 import { theme } from './theme';
 import { sendChatMessage, sendVoiceAudio } from './services/api';
 
-export function Screen1ConversationalIntake({ onExtractTrip, language, onToggleLanguage }) {
+export function Screen1ConversationalIntake({ onExtractTrip, language = 'en', onToggleLanguage = () => {}, currentScenario }) {
   const isTe = language === 'te';
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState([]);
@@ -26,8 +26,10 @@ export function Screen1ConversationalIntake({ onExtractTrip, language, onToggleL
   const [errorMsg, setErrorMsg] = useState(null);
   const scrollViewRef = useRef(null);
 
+  const activeSampleRequest = currentScenario?.sampleRequest || 'Find a sleeper bus from Vizag to Hyderabad under ₹2000.';
+
   const handleSend = async (customPrompt) => {
-    const promptToSend = customPrompt || inputText;
+    const promptToSend = customPrompt || inputText || activeSampleRequest;
     if (!promptToSend.trim()) return;
 
     setErrorMsg(null);
@@ -39,69 +41,32 @@ export function Screen1ConversationalIntake({ onExtractTrip, language, onToggleL
     };
 
     setMessages(prev => [...prev, userMsg]);
-    if (!customPrompt) setInputText('');
+    setInputText('');
     
     setIsLoading(true);
-    setLoadingStepText(isTe ? '🤖 Groq AI తో సమాధానం మరియు మార్గాన్ని విశ్లేషిస్తోంది...' : '🤖 Extracting travel intent via Groq AI & searching routes...');
+    setLoadingStepText(isTe ? '🤖 డెమో మోడ్: ప్రీడైఫైన్డ్ సినారియో రన్ చేస్తోంది...' : '🤖 Demo mode: Loading predefined scenario request...');
 
     try {
-      // Direct Stage 1 -> Stage 2 Auto-Navigation Execution
       await onExtractTrip(promptToSend.trim());
     } catch (err) {
       setIsLoading(false);
-      setErrorMsg(isTe ? 'అభ్యర్థన పంపడంలో విఫలమైంది. దయచేసి మళ్ళీ ప్రయత్నించండి.' : 'Failed to connect to assistant. Please try again.');
+      setErrorMsg(isTe ? 'అభ్యర్థన పంపడంలో విఫలమైంది.' : 'Failed to process demo request.');
     }
   };
 
   const startVoiceRecording = async () => {
     try {
       setErrorMsg(null);
-      const status = await AudioModule.requestRecordingPermissionsAsync();
-      if (!status.granted) {
-        Alert.alert(
-          isTe ? 'అనుమతి నిరాకరించబడింది' : 'Permission Required',
-          isTe ? 'వాయిస్ సేవలకు మైక్రోఫోన్ అనుమతి అవసరం.' : 'Microphone access is required for voice input.'
-        );
-        return;
-      }
-
       setIsRecording(true);
     } catch (err) {
-      console.warn('Failed to start recording, using Web / Expo Fallback:', err);
-      // Native recording fallback for Web / Client
       setIsRecording(true);
     }
   };
 
   const stopVoiceRecordingAndSubmit = async () => {
     setIsRecording(false);
-    setIsLoading(true);
-    setLoadingStepText(isTe ? '🎙️ గ్రోక్ విస్పర్ ద్వారా వాయిస్‌ని టెక్స్ట్‌గా మారుస్తోంది...' : '🎙️ Transcribing audio with Groq Whisper STT...');
-
-    try {
-      let base64Data = null;
-
-      // Call Backend STT Endpoint
-      const sttResult = await sendVoiceAudio(base64Data, language);
-      const transcribedText = sttResult?.transcript || (
-        isTe 
-          ? 'రేపు ఉదయం 9 గంటలలోపు విశాఖపట్నం నుంచి హైదరాబాద్ చేరాలి. నా బడ్జెట్ ₹1,500. ఏసీ స్లీపర్ బస్సు కావాలి.'
-          : 'I need to travel from Vizag to Hyderabad tomorrow. I must reach before 9 AM. My budget is ₹1,500, and I prefer an AC sleeper.'
-      );
-
-      setInputText(transcribedText);
-      setLoadingStepText(isTe ? '🤖 Groq AI ద్వారా ప్రయాణ వివరాలు అన్వయిస్తోంది...' : '🤖 Extracting structured travel parameters via Groq AI...');
-      
-      // Auto-Submit directly to Stage 2
-      await handleSend(transcribedText);
-    } catch (e) {
-      console.warn('Error during voice STT pipeline:', e);
-      const fallbackText = isTe
-        ? 'రేపు ఉదయం 9 గంటలలోపు విశాఖపట్నం నుంచి హైదరాబాద్ చేరాలి. నా బడ్జెట్ ₹1,500. ఏసీ స్లీపర్ బస్సు కావాలి.'
-        : 'I need to travel from Vizag to Hyderabad tomorrow. I must reach before 9 AM. My budget is ₹1,500, and I prefer an AC sleeper.';
-      setInputText(fallbackText);
-      await handleSend(fallbackText);
-    }
+    setInputText(activeSampleRequest);
+    await handleSend(activeSampleRequest);
   };
 
   return (
@@ -125,14 +90,38 @@ export function Screen1ConversationalIntake({ onExtractTrip, language, onToggleL
 
       {/* Main Conversation or Landing State */}
       {messages.length === 0 ? (
-        /* Empty / Landing Page State */
+        /* Empty / Landing Page State with Suggestion Pills */
         <View style={styles.landingCenterContainer}>
           <Text style={styles.landingTitle}>
             {isTe ? 'ఈరోజు ఎక్కడికి వెళ్లాలి?' : 'Where to today?'}
           </Text>
           <Text style={styles.landingSubtitle}>
-            {isTe ? 'మీరు ఎక్కడికి వెళ్లాలని ప్లాన్ చేస్తున్నారు?' : 'Where are you planning to go?'}
+            {isTe ? 'లభ్యమైన ఉదాహరణ మార్గాన్ని ఎంచుకోండి లేదా టైప్ చేయండి:' : 'Tap a supported route or type your query:'}
           </Text>
+
+          {/* Quick Route Suggestion Pills matching DB Mock Data */}
+          <View style={styles.suggestionPillsContainer}>
+            <TouchableOpacity
+              style={styles.suggestionPill}
+              onPress={() => handleSend('I need an AC sleeper bus from Vizag to Hyderabad tomorrow under 1500')}
+            >
+              <Text style={styles.suggestionPillText}>🚌 Vizag ➔ Hyderabad (₹1,500)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.suggestionPill}
+              onPress={() => handleSend('Find a hotel in Gachibowli Hyderabad under 2000 per night for 2 nights')}
+            >
+              <Text style={styles.suggestionPillText}>🏨 Hotel @ Gachibowli, Hyd</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.suggestionPill}
+              onPress={() => handleSend('Bus from Vijayawada to Hyderabad under 1000')}
+            >
+              <Text style={styles.suggestionPillText}>🚌 Vijayawada ➔ Hyderabad</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ) : (
         /* Message Stream */
@@ -231,44 +220,54 @@ export function Screen1ConversationalIntake({ onExtractTrip, language, onToggleL
 
       {/* Bottom Message Composer */}
       <View style={styles.composerContainer}>
+        {/* Sample Scenario Request Prompt Box */}
+        <TouchableOpacity
+          style={styles.sampleRequestPromptBox}
+          onPress={() => handleSend(activeSampleRequest)}
+        >
+          <Text style={styles.sampleRequestLabel}>
+            📋 {isTe ? 'ప్రస్తుత సిమ్యులేటెడ్ అభ్యర్థన (యాక్టివ్ సినారియో):' : 'Current Active Demo Request:'}
+          </Text>
+          <Text style={styles.sampleRequestText}>"{activeSampleRequest}"</Text>
+        </TouchableOpacity>
+
         <View style={styles.inputCardPill}>
           <TextInput
             style={styles.input}
             multiline
-            placeholder={isTe ? 'మీరు ఎక్కడికి వెళ్లాలనుకుంటున్నారో చెప్పండి...' : 'Tell me where you want to go...'}
+            placeholder={isTe ? 'సిమ్యులేటెడ్ టెక్స్ట్ అభ్యర్థన...' : 'Text demo control (loads active scenario)...'}
             placeholderTextColor="#64748B"
             value={inputText}
             onChangeText={setInputText}
-            onSubmitEditing={() => handleSend()}
+            onSubmitEditing={() => handleSend(inputText || activeSampleRequest)}
           />
 
           <View style={styles.actionButtonsRow}>
-            {inputText.trim().length > 0 && (
-              <TouchableOpacity
-                style={styles.sendButtonDark}
-                onPress={() => handleSend()}
-              >
-                <Text style={styles.sendButtonText}>➔</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.sendButtonDark}
+              onPress={() => handleSend(inputText || activeSampleRequest)}
+              accessibilityLabel="Text demo control"
+            >
+              <Text style={styles.sendButtonText}>➔</Text>
+            </TouchableOpacity>
 
-            {/* Orange Microphone Button / Active Recording Visualizer */}
+            {/* Microphone / Voice Demo Control */}
             <TouchableOpacity
               style={[
                 styles.micButtonOrange,
                 isRecording && styles.micButtonRecordingActive
               ]}
               onPress={isRecording ? stopVoiceRecordingAndSubmit : startVoiceRecording}
-              accessibilityLabel="Voice microphone input"
+              accessibilityLabel="Voice demo control"
             >
               <Text style={styles.micIconText}>{isRecording ? '⏹️' : '🎙️'}</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Tagline */}
+        {/* Status notice */}
         <Text style={styles.tagline}>
-          Plan smarter. Travel with confidence.
+          Demo mode: Press 🎙️ or ➔ to load scenario.
         </Text>
       </View>
     </KeyboardAvoidingView>
@@ -545,5 +544,51 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     marginTop: 12,
+  },
+  suggestionPillsContainer: {
+    marginTop: 20,
+    gap: 10,
+    width: '100%',
+    alignItems: 'center',
+  },
+  suggestionPill: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#38BDF8',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    width: '90%',
+    alignItems: 'center',
+    shadowColor: '#0284C7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  suggestionPillText: {
+    color: '#0369A1',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  sampleRequestPromptBox: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+  },
+  sampleRequestLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1D4ED8',
+    marginBottom: 2,
+  },
+  sampleRequestText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1E3A8A',
+    fontStyle: 'italic',
   },
 });

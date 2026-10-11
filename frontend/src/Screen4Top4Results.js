@@ -3,8 +3,13 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { theme } from './theme';
 import { DemoHeader, StatusPill } from './components';
 
-export function Screen4Top4Results({ options, onSelectOption, language, onToggleLanguage }) {
+export function Screen4Top4Results({ options, tripIntent, onSelectOption, language = 'en', onToggleLanguage = () => {} }) {
   const isTe = language === 'te';
+
+  const originName = tripIntent?.originCity || tripIntent?.origin || 'Visakhapatnam';
+  const destName = tripIntent?.destinationCity || tripIntent?.destination || 'Hyderabad';
+  const maxBudgetVal = tripIntent?.maxBudget || tripIntent?.maxBudgetINR || '2,000';
+  const deadlineVal = tripIntent?.arrivalDeadline || '09:00 AM';
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -17,13 +22,11 @@ export function Screen4Top4Results({ options, onSelectOption, language, onToggle
 
       <View style={styles.summaryBar}>
         <Text style={styles.summaryText}>
-          {isTe 
-            ? 'విశాఖపట్నం ➔ హైదరాబాద్ • గడువు: 09:00 AM • బడ్జెట్: ₹1,500'
-            : 'Visakhapatnam ➔ Hyderabad • Deadline: 09:00 AM • Max Budget: ₹1,500'}
+          {originName} ➔ {destName} • Deadline: {deadlineVal} • Max Budget: ₹{maxBudgetVal}
         </Text>
       </View>
 
-      {options.map((opt, index) => {
+      {options.slice(0, 3).map((opt, index) => {
         const isFeasible = opt.feasibility.isFeasible;
         const isRecommended = index === 0 && isFeasible; // Top 1 option badge
 
@@ -60,20 +63,20 @@ export function Screen4Top4Results({ options, onSelectOption, language, onToggle
             <View style={styles.routeRow}>
               <View style={styles.timeBlock}>
                 <Text style={styles.clockTime}>{opt.departureTime}</Text>
-                <Text style={styles.cityName}>Vizag</Text>
+                <Text style={styles.cityName}>{originName}</Text>
               </View>
 
               <View style={styles.durationBlock}>
                 <Text style={styles.durationText}>{opt.duration}</Text>
                 <View style={styles.routeLine} />
                 <Text style={styles.transferText}>
-                  {opt.type === 'DIRECT' ? 'Non-Stop' : '1 Transfer @ Vijayawada'}
+                  {opt.type === 'DIRECT' ? 'Non-Stop' : '1 Transfer'}
                 </Text>
               </View>
 
               <View style={styles.timeBlock}>
                 <Text style={[styles.clockTime, !isFeasible && styles.lateClock]}>{opt.arrivalTime}</Text>
-                <Text style={styles.cityName}>Hyderabad</Text>
+                <Text style={styles.cityName}>{destName}</Text>
               </View>
             </View>
 

@@ -6,7 +6,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = {
+    org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration.class
+})
 public class RoamAgentApplication {
     public static void main(String[] args) {
         SpringApplication.run(RoamAgentApplication.class, args);

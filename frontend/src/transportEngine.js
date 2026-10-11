@@ -13,17 +13,30 @@ export function resolveCanonicalCity(cityName) {
 // Feasibility engine and search algorithms
 export function parseIntentFromInput(text, language = 'en') {
   const isTelugu = language === 'te' || /[\u0C00-\u0C7F]/.test(text);
+  const lower = (text || '').toLowerCase();
   
-  // Default values extracted from user conversational intake
+  let origin = null;
+  let destination = null;
+
+  if (lower.includes('vizag') || lower.includes('visakhapatnam') || lower.includes('vskp') || lower.includes('viag')) origin = 'Visakhapatnam';
+  else if (lower.includes('vijayawada') || lower.includes('bza')) origin = 'Vijayawada';
+  else if (lower.includes('tirupati') || lower.includes('tpty')) origin = 'Tirupati';
+  else if (lower.includes('guntur')) origin = 'Guntur';
+
+  if (lower.includes('hyderabad') || lower.includes('hyd') || lower.includes('secunderabad')) destination = 'Hyderabad';
+  else if (lower.includes('bengaluru') || lower.includes('bangalore') || lower.includes('blr') || lower.includes('banglore')) destination = 'Bengaluru';
+  else if (lower.includes('chennai') || lower.includes('maa')) destination = 'Chennai';
+
   return {
-    origin: 'Visakhapatnam',
-    destination: 'Hyderabad',
-    travelDate: '2026-10-11',
-    arrivalDeadline: '09:00', // Must reach before 9 AM
+    originCity: origin,
+    destinationCity: destination,
+    origin: origin,
+    destination: destination,
+    travelDate: 'Tomorrow',
+    arrivalDeadline: '09:00',
     travelers: 1,
     maxBudgetINR: 1500,
-    coachPreference: 'AC sleeper',
-    berthPreference: 'single',
+    coachPreference: lower.includes('sleeper') ? 'SLEEPER' : 'AC',
     minimumTransferMinutes: 45,
     language: isTelugu ? 'te' : 'en',
     status: 'DRAFT',

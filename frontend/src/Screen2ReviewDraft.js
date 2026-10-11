@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { theme } from './theme';
 import { DemoHeader, StatusPill } from './components';
 
-export function Screen2ReviewDraft({ intent, onProceedToClarification, onConfirmAndSearch, language, onToggleLanguage }) {
+export function Screen2ReviewDraft({ intent, onProceedToClarification, onConfirmAndSearch, onBackToIntake, language = 'en', onToggleLanguage = () => {} }) {
   const isTe = language === 'te';
 
   return (
@@ -14,6 +14,13 @@ export function Screen2ReviewDraft({ intent, onProceedToClarification, onConfirm
         language={language}
         onToggleLanguage={onToggleLanguage}
       />
+
+      {/* Back to Chat / Voice Intake Button */}
+      {onBackToIntake && (
+        <TouchableOpacity style={styles.backButton} onPress={onBackToIntake}>
+          <Text style={styles.backButtonText}>⬅️ {isTe ? 'కన్వర్సేషన్ చాట్‌కి తిరిగి వెళ్ళు' : 'Back to Intake & Chat'}</Text>
+        </TouchableOpacity>
+      )}
 
       <View style={styles.banner}>
         <Text style={styles.bannerTitle}>✨ {isTe ? 'AI అన్వయించిన వివరాలు' : 'AI Extracted Trip Summary'}</Text>
@@ -27,37 +34,39 @@ export function Screen2ReviewDraft({ intent, onProceedToClarification, onConfirm
       <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.label}>{isTe ? 'ప్రారంభ స్థానం:' : 'Origin:'}</Text>
-          <Text style={styles.value}>{intent.origin || 'Not set'}</Text>
+          <Text style={styles.value}>{intent.originCity || intent.origin || 'Not set'}</Text>
         </View>
 
         <View style={styles.row}>
           <Text style={styles.label}>{isTe ? 'గమ్యస్థానం:' : 'Destination:'}</Text>
-          <Text style={styles.value}>{intent.destination || 'Not set'}</Text>
+          <Text style={styles.value}>{intent.destinationCity || intent.destination || 'Not set'}</Text>
         </View>
 
         <View style={styles.row}>
           <Text style={styles.label}>{isTe ? 'ప్రయాణ తేదీ:' : 'Travel Date:'}</Text>
-          <Text style={styles.value}>{intent.travelDate}</Text>
+          <Text style={styles.value}>{intent.travelDate || 'Tomorrow'}</Text>
         </View>
 
         <View style={styles.row}>
           <Text style={styles.label}>{isTe ? 'చేరుకోవాల్సిన గడువు:' : 'Arrival Deadline:'}</Text>
-          <Text style={styles.valueHighlight}>Before {intent.arrivalDeadline} AM</Text>
+          <Text style={styles.valueHighlight}>
+            {intent.arrivalDeadline ? `Before ${intent.arrivalDeadline}` : 'Flexible / Before 9 AM'}
+          </Text>
         </View>
 
         <View style={styles.row}>
           <Text style={styles.label}>{isTe ? 'గరిష్ట బడ్జెట్:' : 'Max Budget:'}</Text>
-          <Text style={styles.value}>₹{intent.maxBudgetINR || '---'}</Text>
+          <Text style={styles.value}>₹{intent.maxBudget || intent.maxBusBudget || intent.maxBudgetINR || '1,500'}</Text>
         </View>
 
         <View style={styles.row}>
           <Text style={styles.label}>{isTe ? 'కోచ్ ప్రాధాన్యత:' : 'Coach Preference:'}</Text>
-          <Text style={styles.value}>{intent.coachPreference}</Text>
+          <Text style={styles.value}>{intent.preferredMode || intent.preferredBusMode || intent.coachPreference || 'SLEEPER'}</Text>
         </View>
 
         <View style={styles.row}>
           <Text style={styles.label}>{isTe ? 'కనీస మార్పిడి సమయం:' : 'Min Transfer Buffer:'}</Text>
-          <Text style={styles.value}>{intent.minimumTransferMinutes} Minutes</Text>
+          <Text style={styles.value}>{intent.minimumTransferMinutes || 45} Minutes</Text>
         </View>
 
         <View style={styles.statusRow}>
@@ -139,5 +148,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
   },
-  searchBtnText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' }
+  searchBtnText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
+  backButton: {
+    backgroundColor: '#F1F5F9',
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: theme.radius.lg,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    alignSelf: 'flex-start',
+  },
+  backButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
 });

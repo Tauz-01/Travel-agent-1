@@ -4,10 +4,11 @@ import {
   evaluateDisruptionRisk,
   calculateRecoveryOptions
 } from '../transportEngine';
+import Constants from 'expo-constants';
 
 // Central configuration for Spring Boot API base URL
-// Usage in .env or app environment: EXPO_PUBLIC_API_BASE_URL=http://<YOUR_SPRING_BOOT_HOST>:8080/api/v1
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.2.194:8080/api/v1';
+// Directly targets local Wi-Fi IP on port 5000
+export const API_BASE_URL = 'http://10.176.242.187:5000/api/v1';
 
 // Configured Spring Boot API endpoint paths matching backend contract
 export const ENDPOINTS = {
@@ -25,14 +26,14 @@ export const ENDPOINTS = {
 // Generic fetch wrapper with timeout and fallback support
 async function apiRequest(url, options = {}) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
   try {
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        ...options.headers,
+        ...(options.headers || {}),
       },
       signal: controller.signal,
     });
@@ -45,6 +46,7 @@ async function apiRequest(url, options = {}) {
     return await response.json();
   } catch (error) {
     clearTimeout(timeoutId);
+    console.warn(`[API Network Notice] Endpoint unreachable (${url}):`, error.message || error);
     throw error;
   }
 }
@@ -114,12 +116,12 @@ export async function sendChatMessage(userPrompt, language = 'en') {
           : `I've extracted your travel plan. Review the details below.`,
         intent: {
           intentId: response.intentId,
-          originCity: response.draftIntent.originCity || 'Visakhapatnam',
-          destinationCity: response.draftIntent.destinationCity || 'Hyderabad',
+          originCity: response.draftIntent.originCity,
+          destinationCity: response.draftIntent.destinationCity,
           travelDate: response.draftIntent.travelDate,
           arrivalDeadline: response.draftIntent.arrivalDeadline,
-          maxBudget: response.draftIntent.maxBudget || 2000,
-          preferredMode: response.draftIntent.preferredMode || 'SLEEPER',
+          maxBudget: response.draftIntent.maxBusBudget || response.draftIntent.maxBudget,
+          preferredMode: response.draftIntent.preferredBusMode || response.draftIntent.preferredMode,
           passengerCount: response.draftIntent.passengerCount || 1,
         },
       };
@@ -133,8 +135,8 @@ export async function sendChatMessage(userPrompt, language = 'en') {
     status: 'SUCCESS',
     source: 'LOCAL_FALLBACK',
     message: language === 'te'
-      ? `మీ అభ్యర్థనను విశ్లేషించాను. విశాఖపట్నం నుండి హైదరాబాద్ ప్రయాణానికి రూట్‌లు వెతుకుతున్నాను.`
-      : `I've processed your travel request for Vizag to Hyderabad. Let's review the details.`,
+      ? `మీ అభ్యర్థనను విశ్లేషించాను.`
+      : `I've processed your travel request. Let's review the details.`,
     intent: extractedIntent,
   };
 }

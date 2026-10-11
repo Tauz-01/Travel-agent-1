@@ -4,7 +4,7 @@ import { theme } from './theme';
 import { DemoHeader, StatusPill } from './components';
 import { InteractiveMapView } from './MapView';
 
-export function Screen7DisruptionMonitor({ option, disruption, TriggerDelay, onStartRecovery, language, onToggleLanguage }) {
+export function Screen7DisruptionMonitor({ option, disruption, TriggerDelay, onStartRecovery, language = 'en', onToggleLanguage = () => {} }) {
   const isTe = language === 'te';
 
   return (

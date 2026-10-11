@@ -1,28 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { theme } from './theme';
 import { DemoHeader, StatusPill } from './components';
 
-export function Screen8RecoveryApproval({ activeItinerary, proposal, onApprove, onReject, language, onToggleLanguage }) {
+export function Screen8RecoveryApproval({ activeItinerary, proposal, onApprove, onReject, language = 'en', onToggleLanguage = () => {} }) {
   const isTe = language === 'te';
+  const [paymentDone, setPaymentDone] = useState(false);
 
   if (!proposal) return null;
+
+  const handlePayment = () => {
+    setPaymentDone(true);
+    // Automatically complete revision approval after payment confirmation
+    setTimeout(() => {
+      onApprove();
+    }, 1500);
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <DemoHeader
-        title={isTe ? '8. ప్రయాణ మార్పు అనుమతి (Approval Required)' : '8. Explicit Traveler Approval Gate'}
-        subtitle={isTe ? 'సవరించిన ప్రయాణ వివరాలు మరియు ఛార్జీ సరిచూడండి' : 'Review Proposed Alternative Itinerary Revision #2'}
+        title={isTe ? '8. చెల్లింపు మరియు ధృవీకరణ' : '8. Payment & Booking Confirmation'}
+        subtitle={isTe ? 'ప్రతిపాదిత ప్రయాణ సవరణ కోసం చెల్లింపు పూర్తి చేయండి' : 'Complete Payment & Confirm Revised Journey Booking'}
         language={language}
         onToggleLanguage={onToggleLanguage}
       />
 
       <View style={styles.gateBanner}>
-        <Text style={styles.gateTitle}>✋ {isTe ? 'వినియోగదారు అనుమతి తప్పనిసరి' : 'EXPLICIT Traveler Approval Gate'}</Text>
+        <Text style={styles.gateTitle}>💳 {isTe ? 'చెల్లింపు గేట్‌వే' : 'Payment Authorization Gateway'}</Text>
         <Text style={styles.gateText}>
           {isTe
-            ? 'ప్రతిపాదిత ప్రయాణ ప్రణాళిక మీ అనుమతి లేనిదే సవరించబడదు. మార్పులను తనిఖీ చేసి ఆమోదించండి.'
-            : 'Per Architectural Goal Stage 12: Proposed alternatives remain inactive until explicit traveler consent is granted.'}
+            ? 'సవరించిన బస్సు టిక్కెట్ మరియు రీబుకింగ్ కోసం చెల్లింపు పూర్తి చేయండి.'
+            : 'Complete payment for fare difference and revised seat reservation to confirm your updated itinerary.'}
         </Text>
       </View>
 
@@ -53,27 +62,42 @@ export function Screen8RecoveryApproval({ activeItinerary, proposal, onApprove, 
           </View>
         </View>
 
-        {/* AI Localized Explanation Box */}
-        <View style={styles.explanationBox}>
-          <Text style={styles.explanationTitle}>🤖 {isTe ? 'AI ప్రయాణ సలహాదారు విశ్లేషణ' : 'AI Recovery Explanation'}</Text>
-          <Text style={styles.explanationText}>
-            {isTe ? proposal.recommendationReasonTe : proposal.recommendationReasonEn}
-          </Text>
+        {/* Payment Summary Box */}
+        <View style={styles.paymentSummaryBox}>
+          <Text style={styles.paymentSummaryTitle}>💰 {isTe ? 'చెల్లించవలసిన నికర మొత్తం' : 'Net Payable Amount'}</Text>
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentLabel}>{isTe ? 'ఛార్జీ తేడా (Fare Difference)' : 'Revised Fare Adjustment'}</Text>
+            <Text style={styles.paymentValue}>₹{proposal.fareDifference}</Text>
+          </View>
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentLabel}>{isTe ? 'మొత్తం చెల్లింపు' : 'Total Payable'}</Text>
+            <Text style={styles.paymentTotal}>₹{proposal.fareDifference}</Text>
+          </View>
         </View>
       </View>
 
-      {/* Action Buttons (Approve / Reject) */}
-      <View style={styles.actionCluster}>
-        <TouchableOpacity style={styles.rejectBtn} onPress={onReject}>
-          <Text style={styles.rejectBtnText}>{isTe ? 'తిరస్కరించు (Keep Original)' : 'Reject Proposal'}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.approveBtn} onPress={onApprove}>
-          <Text style={styles.approveBtnText}>
-            {isTe ? 'ఆమోదించు & అప్‌డేట్ చేయి ➔' : 'Approve & Commit Revision 2 ➔'}
+      {/* Payment Success State OR Action Cluster */}
+      {paymentDone ? (
+        <View style={styles.successCard}>
+          <Text style={styles.successIcon}>✅</Text>
+          <Text style={styles.successTitle}>{isTe ? 'చెల్లింపు పూర్తయింది!' : 'Payment Done Successfully!'}</Text>
+          <Text style={styles.successSubtitle}>
+            {isTe ? 'సవరించిన టిక్కెట్ ధృవీకరించబడింది. ప్రయాణ పర్యవేక్షణకు వెళ్తోంది...' : 'Revised ticket confirmed. Redirecting to live journey monitor...'}
           </Text>
-        </TouchableOpacity>
-      </View>
+        </View>
+      ) : (
+        <View style={styles.actionCluster}>
+          <TouchableOpacity style={styles.rejectBtn} onPress={onReject}>
+            <Text style={styles.rejectBtnText}>{isTe ? 'రద్దు చేయి' : 'Cancel'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.paymentBtn} onPress={handlePayment}>
+            <Text style={styles.paymentBtnText}>
+              💳 {isTe ? `₹${proposal.fareDifference} చెల్లించండి (Payment Done)` : `Pay ₹${proposal.fareDifference} & Confirm ➔`}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -139,12 +163,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rejectBtnText: { fontSize: 12, fontWeight: '700', color: theme.colors.textSecondary },
-  approveBtn: {
-    flex: 1.6,
-    backgroundColor: theme.colors.primary,
+  paymentBtn: {
+    flex: 2,
+    backgroundColor: theme.colors.success,
     borderRadius: theme.radius.lg,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  approveBtnText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' }
+  paymentBtnText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
+  paymentSummaryBox: {
+    backgroundColor: '#F1F5F9',
+    padding: 12,
+    borderRadius: theme.radius.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginTop: 8,
+  },
+  paymentSummaryTitle: { fontSize: 12, fontWeight: '700', color: '#1E293B', marginBottom: 6 },
+  paymentRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  paymentLabel: { fontSize: 11, color: '#64748B' },
+  paymentValue: { fontSize: 12, fontWeight: '600', color: '#0F172A' },
+  paymentTotal: { fontSize: 14, fontWeight: '700', color: '#166534' },
+  successCard: {
+    backgroundColor: '#DCFCE7',
+    margin: theme.spacing.md,
+    padding: theme.spacing.lg,
+    borderRadius: theme.radius.xl,
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
+    alignItems: 'center',
+  },
+  successIcon: { fontSize: 32, marginBottom: 8 },
+  successTitle: { fontSize: 16, fontWeight: '700', color: '#15803D', marginBottom: 4 },
+  successSubtitle: { fontSize: 12, color: '#166534', textAlign: 'center' }
 });

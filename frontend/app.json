@@ -23,7 +23,13 @@
     "plugins": [
       "expo-font",
       "expo-audio",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow RoamAgent to access your location for showing nearby stops and tracking your journey."
+        }
+      ]
     ]
   }
 }

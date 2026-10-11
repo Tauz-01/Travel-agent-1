@@ -1,19 +1,164 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Svg, { Polyline, Circle, Marker, Text as SvgText, Rect, Line } from 'react-native-svg';
+import Svg, { Polyline, Circle, Line, Rect, Text as SvgText } from 'react-native-svg';
 import { theme } from './theme';
+import { MOCK_CITIES } from './mockData';
+
+// Map city coordinates or fallback lookup to 2D SVG canvas bounds [width: 360, height: 210]
+function getSvgCoordinates(legs = [], simulatedBusLocation = null) {
+  // SVG viewport dimensions
+  const SVG_WIDTH = 360;
+  const SVG_HEIGHT = 210;
+  const PADDING = 35;
+
+  // Known city fallback coordinates (geographic lat, lng)
+  const cityCoordsMap = {
+    'visakhapatnam': { lat: 17.7231, lng: 83.3012 },
+    'vizag': { lat: 17.7231, lng: 83.3012 },
+    'vijayawada': { lat: 16.5062, lng: 80.6480 },
+    'vja': { lat: 16.5062, lng: 80.6480 },
+    'hyderabad': { lat: 17.3850, lng: 78.4867 },
+    'hyd': { lat: 17.3850, lng: 78.4867 },
+    'tirupati': { lat: 13.6288, lng: 79.4192 },
+    'guntur': { lat: 16.3067, lng: 80.4365 },
+    'rajahmundry': { lat: 17.0005, lng: 81.8040 },
+    'kakinada': { lat: 16.9891, lng: 82.2475 },
+    'nellore': { lat: 14.4426, lng: 79.9865 },
+    'kurnool': { lat: 15.8281, lng: 78.0373 },
+    'anantapur': { lat: 14.6819, lng: 77.6006 },
+    'warangal': { lat: 17.9689, lng: 79.5941 },
+    'nizamabad': { lat: 18.6725, lng: 78.0941 },
+    'khammam': { lat: 17.2473, lng: 80.1514 },
+    'kadapa': { lat: 14.4673, lng: 78.8242 },
+    'ongole': { lat: 15.5057, lng: 80.0499 },
+    'eluru': { lat: 16.7107, lng: 81.1035 },
+    'vizianagaram': { lat: 18.1124, lng: 83.4023 },
+  };
+
+  // Populate from MOCK_CITIES dynamically if available
+  MOCK_CITIES.forEach(c => {
+    if (c.city_name) {
+      cityCoordsMap[c.city_name.toLowerCase()] = { lat: c.latitude, lng: c.longitude };
+    }
+  });
+
+  // Extract stops from legs
+  const stops = [];
+  if (Array.isArray(legs) && legs.length > 0) {
+    legs.forEach((leg, idx) => {
+      if (leg.originStop) {
+        stops.push({
+          name: leg.originStop.name || leg.originStop.city || `Stop ${idx + 1}`,
+          city: (leg.originStop.city || leg.originStop.name || '').toLowerCase(),
+          lat: leg.originStop.latitude || null,
+          lng: leg.originStop.longitude || null,
+          isOrigin: idx === 0,
+          isTransfer: idx > 0,
+          isDest: false
+        });
+      }
+      if (idx === legs.length - 1 && leg.destStop) {
+        stops.push({
+          name: leg.destStop.name || leg.destStop.city || `Destination`,
+          city: (leg.destStop.city || leg.destStop.name || '').toLowerCase(),
+          lat: leg.destStop.latitude || null,
+          lng: leg.destStop.longitude || null,
+          isOrigin: false,
+          isTransfer: false,
+          isDest: true
+        });
+      }
+    });
+  }
+
+  // Fallback default stops if legs missing or empty
+  if (stops.length === 0) {
+    stops.push(
+      { name: 'Vizag RTC', city: 'visakhapatnam', lat: 17.7231, lng: 83.3012, isOrigin: true },
+      { name: 'Vijayawada PNBS', city: 'vijayawada', lat: 16.5062, lng: 80.6480, isTransfer: true },
+      { name: 'Hyd MGBS', city: 'hyderabad', lat: 17.3850, lng: 78.4867, isDest: true }
+    );
+  }
+
+  // Resolve lat/lng for each stop
+  const resolvedStops = stops.map(s => {
+    let lat = s.lat;
+    let lng = s.lng;
+    if (!lat || !lng) {
+      const match = cityCoordsMap[s.city] || Object.keys(cityCoordsMap).find(k => s.city.includes(k)) && cityCoordsMap[Object.keys(cityCoordsMap).find(k => s.city.includes(k))];
+      if (match) {
+        lat = match.lat;
+        lng = match.lng;
+      } else {
+        // Fallback default
+        lat = 16.5;
+        lng = 80.5;
+      }
+    }
+    return { ...s, lat, lng };
+  });
+
+  // Calculate bounding box for dynamic projection
+  const lats = resolvedStops.map(s => s.lat);
+  const lngs = resolvedStops.map(s => s.lng);
+
+  let minLat = Math.min(...lats);
+  let maxLat = Math.max(...lats);
+  let minLng = Math.min(...lngs);
+  let maxLng = Math.max(...lngs);
+
+  // Prevent division by zero if all points identical
+  if (minLat === maxLat) { minLat -= 0.5; maxLat += 0.5; }
+  if (minLng === maxLng) { minLng -= 0.5; maxLng += 0.5; }
+
+  // Map geographic coords (lat, lng) to SVG canvas (x, y)
+  // Longitude maps to X (East is larger X)
+  // Latitude maps to Y (North is smaller Y in SVG top-down coords)
+  const projectPoint = (lat, lng) => {
+    const xRatio = (lng - minLng) / (maxLng - minLng);
+    const yRatio = (lat - minLat) / (maxLat - minLat);
+
+    const x = PADDING + xRatio * (SVG_WIDTH - 2 * PADDING);
+    // Invert Y so higher latitude (north) is at the top (lower Y)
+    const y = (SVG_HEIGHT - PADDING) - yRatio * (SVG_HEIGHT - 2 * PADDING);
+
+    return { x: Math.round(x), y: Math.round(y) };
+  };
+
+  const projectedNodes = resolvedStops.map(s => {
+    const pt = projectPoint(s.lat, s.lng);
+    return { ...s, x: pt.x, y: pt.y };
+  });
+
+  // Polyline string points format: "x1,y1 x2,y2 ..."
+  const polylinePoints = projectedNodes.map(n => `${n.x},${n.y}`).join(' ');
+
+  // Bus vehicle marker location calculation
+  let busX = 125;
+  let busY = 118;
+
+  if (simulatedBusLocation && typeof simulatedBusLocation.x === 'number') {
+    busX = simulatedBusLocation.x;
+    busY = simulatedBusLocation.y;
+  } else if (projectedNodes.length >= 2) {
+    // Interpolate midpoint between origin and 1st transfer stop for active bus
+    busX = Math.round((projectedNodes[0].x + projectedNodes[1].x) / 2);
+    busY = Math.round((projectedNodes[0].y + projectedNodes[1].y) / 2);
+  }
+
+  return { projectedNodes, polylinePoints, busX, busY };
+}
 
 export function InteractiveMapView({ legs = [], highlightedLegIndex = null, isDisrupted = false, simulatedBusLocation = null }) {
-  // SVG canvas geometry mapping Visakhapatnam -> Vijayawada -> Hyderabad
-  // Vizag: (40, 60), Vijayawada: (170, 150), Vijayawada Bypass: (185, 120), Hyd: (320, 60)
-  
   const width = 360;
   const height = 210;
+
+  const { projectedNodes, polylinePoints, busX, busY } = getSvgCoordinates(legs, simulatedBusLocation);
 
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
-        <Text style={styles.mapTitle}>Route Geometry & Transit Map</Text>
+        <Text style={styles.mapTitle}>Route Geometry & Dynamic Transit Map</Text>
         <View style={styles.demoBadge}>
           <Text style={styles.demoBadgeText}>Simulated GPS</Text>
         </View>
@@ -30,57 +175,55 @@ export function InteractiveMapView({ legs = [], highlightedLegIndex = null, isDi
           <Line x1="120" y1="0" x2="120" y2={height} stroke="#1E293B" strokeWidth="1" strokeDasharray="4" />
           <Line x1="240" y1="0" x2="240" y2={height} stroke="#1E293B" strokeWidth="1" strokeDasharray="4" />
 
-          {/* NH-16 Highway Corridor Line (Vizag -> Vijayawada) */}
+          {/* Dynamic Highway Corridor Route Polyline */}
           <Polyline
-            points="40,60 170,150"
+            points={polylinePoints}
             stroke={isDisrupted ? theme.colors.action : theme.colors.secondary}
             strokeWidth={isDisrupted ? "4" : "3"}
             strokeDasharray={isDisrupted ? "6,3" : "none"}
           />
 
-          {/* NH-65 Highway Corridor Line (Vijayawada -> Hyderabad) */}
-          <Polyline
-            points="170,150 320,60"
-            stroke={theme.colors.success}
-            strokeWidth="3"
-          />
+          {/* Render Route Nodes / Stop Pins Dynamically */}
+          {projectedNodes.map((node, index) => {
+            const isFirst = index === 0;
+            const isLast = index === projectedNodes.length - 1;
+            const nodeColor = isDisrupted && !isFirst ? theme.colors.action : (isLast ? theme.colors.success : theme.colors.secondary);
 
-          {/* Alternate Bypass Highway Corridor (Vijayawada Bypass -> Hyd) */}
-          <Polyline
-            points="170,150 185,120 320,60"
-            stroke="#38BDF8"
-            strokeWidth="2"
-            strokeDasharray="3,3"
-          />
-
-          {/* Node 1: Visakhapatnam RTC */}
-          <Circle cx="40" cy="60" r="7" fill={theme.colors.secondary} stroke="#FFFFFF" strokeWidth="2" />
-          <SvgText x="15" y="42" fill="#E2E8F0" fontSize="10" fontWeight="bold">Vizag RTC</SvgText>
-
-          {/* Node 2: Vijayawada PNBS */}
-          <Circle cx="170" cy="150" r="8" fill={isDisrupted ? theme.colors.action : theme.colors.secondary} stroke="#FFFFFF" strokeWidth="2" />
-          <SvgText x="125" y="172" fill={isDisrupted ? "#FF8A8A" : "#E2E8F0"} fontSize="10" fontWeight="bold">Vijayawada PNBS</SvgText>
-
-          {/* Node 2b: Vijayawada Bypass */}
-          <Circle cx="185" cy="120" r="5" fill="#38BDF8" stroke="#FFFFFF" strokeWidth="1.5" />
-          <SvgText x="195" y="124" fill="#38BDF8" fontSize="9">Bypass Point</SvgText>
-
-          {/* Node 3: Hyderabad MGBS */}
-          <Circle cx="320" cy="60" r="7" fill={theme.colors.success} stroke="#FFFFFF" strokeWidth="2" />
-          <SvgText x="280" y="42" fill="#E2E8F0" fontSize="10" fontWeight="bold">Hyd MGBS</SvgText>
+            return (
+              <React.Fragment key={`node-${index}-${node.name}`}>
+                <Circle
+                  cx={node.x}
+                  cy={node.y}
+                  r={isFirst || isLast ? "7" : "6"}
+                  fill={nodeColor}
+                  stroke="#FFFFFF"
+                  strokeWidth="2"
+                />
+                <SvgText
+                  x={node.x - 20}
+                  y={node.y > 150 ? node.y - 12 : node.y + 18}
+                  fill={isDisrupted && !isFirst ? "#FF8A8A" : "#E2E8F0"}
+                  fontSize="9"
+                  fontWeight="bold"
+                >
+                  {node.name.length > 14 ? `${node.name.substring(0, 12)}..` : node.name}
+                </SvgText>
+              </React.Fragment>
+            );
+          })}
 
           {/* Active Simulated Vehicle Marker */}
           <Circle 
-            cx={simulatedBusLocation ? simulatedBusLocation.x : 125} 
-            cy={simulatedBusLocation ? simulatedBusLocation.y : 118} 
+            cx={busX} 
+            cy={busY} 
             r="10" 
             fill={theme.colors.action} 
             stroke="#FFFFFF" 
             strokeWidth="2" 
           />
           <SvgText 
-            x={(simulatedBusLocation ? simulatedBusLocation.x : 125) - 4} 
-            y={(simulatedBusLocation ? simulatedBusLocation.y : 118) + 4} 
+            x={busX - 4} 
+            y={busY + 4} 
             fill="#FFFFFF" 
             fontSize="9" 
             fontWeight="bold"
@@ -93,11 +236,15 @@ export function InteractiveMapView({ legs = [], highlightedLegIndex = null, isDi
       <View style={styles.legendRow}>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: theme.colors.secondary }]} />
-          <Text style={styles.legendText}>Leg 1 (Vizag-VJA)</Text>
+          <Text style={styles.legendText}>
+            {projectedNodes.length > 0 ? `${projectedNodes[0].name.split(' ')[0]} Route` : 'Leg 1'}
+          </Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: theme.colors.success }]} />
-          <Text style={styles.legendText}>Leg 2 (VJA-Hyd)</Text>
+          <Text style={styles.legendText}>
+            {projectedNodes.length > 1 ? `To ${projectedNodes[projectedNodes.length - 1].name.split(' ')[0]}` : 'Leg 2'}
+          </Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: theme.colors.action }]} />

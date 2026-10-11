@@ -5,7 +5,7 @@ import { DemoHeader, StatusPill } from './components';
 import { InteractiveMapView } from './MapView';
 import { MOCK_HOTELS } from './mockData';
 
-export function Screen5ItineraryDetails({ option, onProceedToCheckout, language, onToggleLanguage }) {
+export function Screen5ItineraryDetails({ option, onProceedToCheckout, language = 'en', onToggleLanguage = () => {} }) {
   const isTe = language === 'te';
 
   // Retrieve destination city hotels matching selected option

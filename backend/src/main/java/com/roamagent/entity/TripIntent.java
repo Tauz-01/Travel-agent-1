@@ -17,19 +17,28 @@ public class TripIntent {
     @Column(nullable = false, length = 36)
     private String conversationId;
 
-    @Column(nullable = false)
+    @Column(length = 30)
+    private String intentType; // BUS, HOTEL, COMBINED
+
     private String originCity;
-
-    @Column(nullable = false)
     private String destinationCity;
+    private String locality;
 
-    @Column(nullable = false)
     private LocalDate travelDate;
-
     private LocalDateTime arrivalDeadline;
     private BigDecimal maxBudget;
     private String preferredMode;
     private Integer passengerCount;
+
+    // Hotel intent fields
+    private String hotelDestination;
+    private LocalDate checkInDate;
+    private LocalDate checkOutDate;
+    private Integer stayNights;
+    private Integer roomCount;
+    private BigDecimal maxHotelBudgetPerNight;
+    private Double minHotelRating;
+
     private String languagePreference;
     private Boolean isClarified;
 

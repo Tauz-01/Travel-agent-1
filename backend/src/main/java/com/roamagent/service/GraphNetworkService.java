@@ -52,8 +52,31 @@ public class GraphNetworkService {
     }
 
     public List<RouteCandidate> searchRoutes(String originCity, String destinationCity, LocalDate travelDate) {
+        LocalDate searchDate = travelDate != null ? travelDate : LocalDate.now().plusDays(1);
+        
         List<Stop> originStops = stopRepository.findByCityIgnoreCase(originCity);
         List<Stop> destStops = stopRepository.findByCityIgnoreCase(destinationCity);
+
+        // Alias matching for canonical city nicknames
+        if (originStops.isEmpty()) {
+            if ("vizag".equalsIgnoreCase(originCity) || "vskp".equalsIgnoreCase(originCity)) {
+                originStops = stopRepository.findByCityIgnoreCase("Visakhapatnam");
+            } else if ("hyd".equalsIgnoreCase(originCity)) {
+                originStops = stopRepository.findByCityIgnoreCase("Hyderabad");
+            } else if ("bza".equalsIgnoreCase(originCity)) {
+                originStops = stopRepository.findByCityIgnoreCase("Vijayawada");
+            }
+        }
+
+        if (destStops.isEmpty()) {
+            if ("hyd".equalsIgnoreCase(destinationCity)) {
+                destStops = stopRepository.findByCityIgnoreCase("Hyderabad");
+            } else if ("vizag".equalsIgnoreCase(destinationCity) || "vskp".equalsIgnoreCase(destinationCity)) {
+                destStops = stopRepository.findByCityIgnoreCase("Visakhapatnam");
+            } else if ("bza".equalsIgnoreCase(destinationCity)) {
+                destStops = stopRepository.findByCityIgnoreCase("Vijayawada");
+            }
+        }
 
         List<RouteCandidate> candidates = new ArrayList<>();
         if (originStops.isEmpty() || destStops.isEmpty()) {
@@ -67,16 +90,16 @@ public class GraphNetworkService {
                 // 1. Search Direct Routes
                 for (BusService service : allServices) {
                     List<ServiceStop> serviceStops = serviceStopRepository.findByBusServiceIdOrdered(service.getId());
-                    Optional<ServiceStop> originSSOpt = serviceStops.stream().filter(ss -> ss.getStop().getId().equals(origin.getId())).findFirst();
-                    Optional<ServiceStop> destSSOpt = serviceStops.stream().filter(ss -> ss.getStop().getId().equals(dest.getId())).findFirst();
+                    Optional<ServiceStop> originSSOpt = serviceStops.stream().filter(ss -> ss.getStop() != null && ss.getStop().getId().equals(origin.getId())).findFirst();
+                    Optional<ServiceStop> destSSOpt = serviceStops.stream().filter(ss -> ss.getStop() != null && ss.getStop().getId().equals(dest.getId())).findFirst();
 
                     if (originSSOpt.isPresent() && destSSOpt.isPresent()) {
                         ServiceStop originSS = originSSOpt.get();
                         ServiceStop destSS = destSSOpt.get();
 
                         if (originSS.getStopSequence() < destSS.getStopSequence()) {
-                            LocalDateTime depTime = LocalDateTime.of(travelDate, originSS.getScheduledDepartureTime()).plusDays(originSS.getDayOffset());
-                            LocalDateTime arrTime = LocalDateTime.of(travelDate, destSS.getScheduledArrivalTime()).plusDays(destSS.getDayOffset());
+                            LocalDateTime depTime = LocalDateTime.of(searchDate, originSS.getScheduledDepartureTime()).plusDays(originSS.getDayOffset());
+                            LocalDateTime arrTime = LocalDateTime.of(searchDate, destSS.getScheduledArrivalTime()).plusDays(destSS.getDayOffset());
 
                             BigDecimal fare = fareRecordRepository.findByBusServiceIdAndFromStopIdAndToStopId(service.getId(), origin.getId(), dest.getId())
                                     .map(FareRecord::getBaseFare)
@@ -111,29 +134,29 @@ public class GraphNetworkService {
 
                     for (BusService s1 : allServices) {
                         List<ServiceStop> s1Stops = serviceStopRepository.findByBusServiceIdOrdered(s1.getId());
-                        Optional<ServiceStop> originSSOpt = s1Stops.stream().filter(ss -> ss.getStop().getId().equals(origin.getId())).findFirst();
-                        Optional<ServiceStop> hubSS1Opt = s1Stops.stream().filter(ss -> ss.getStop().getId().equals(hub.getId())).findFirst();
+                        Optional<ServiceStop> originSSOpt = s1Stops.stream().filter(ss -> ss.getStop() != null && ss.getStop().getId().equals(origin.getId())).findFirst();
+                        Optional<ServiceStop> hubSS1Opt = s1Stops.stream().filter(ss -> ss.getStop() != null && ss.getStop().getId().equals(hub.getId())).findFirst();
 
                         if (originSSOpt.isPresent() && hubSS1Opt.isPresent() && originSSOpt.get().getStopSequence() < hubSS1Opt.get().getStopSequence()) {
                             ServiceStop originSS = originSSOpt.get();
                             ServiceStop hubSS1 = hubSS1Opt.get();
 
-                            LocalDateTime leg1Dep = LocalDateTime.of(travelDate, originSS.getScheduledDepartureTime()).plusDays(originSS.getDayOffset());
-                            LocalDateTime leg1Arr = LocalDateTime.of(travelDate, hubSS1.getScheduledArrivalTime()).plusDays(hubSS1.getDayOffset());
+                            LocalDateTime leg1Dep = LocalDateTime.of(searchDate, originSS.getScheduledDepartureTime()).plusDays(originSS.getDayOffset());
+                            LocalDateTime leg1Arr = LocalDateTime.of(searchDate, hubSS1.getScheduledArrivalTime()).plusDays(hubSS1.getDayOffset());
 
                             for (BusService s2 : allServices) {
                                 if (s1.getId().equals(s2.getId())) continue;
 
                                 List<ServiceStop> s2Stops = serviceStopRepository.findByBusServiceIdOrdered(s2.getId());
-                                Optional<ServiceStop> hubSS2Opt = s2Stops.stream().filter(ss -> ss.getStop().getId().equals(hub.getId())).findFirst();
-                                Optional<ServiceStop> destSSOpt = s2Stops.stream().filter(ss -> ss.getStop().getId().equals(dest.getId())).findFirst();
+                                Optional<ServiceStop> hubSS2Opt = s2Stops.stream().filter(ss -> ss.getStop() != null && ss.getStop().getId().equals(hub.getId())).findFirst();
+                                Optional<ServiceStop> destSSOpt = s2Stops.stream().filter(ss -> ss.getStop() != null && ss.getStop().getId().equals(dest.getId())).findFirst();
 
                                 if (hubSS2Opt.isPresent() && destSSOpt.isPresent() && hubSS2Opt.get().getStopSequence() < destSSOpt.get().getStopSequence()) {
                                     ServiceStop hubSS2 = hubSS2Opt.get();
                                     ServiceStop destSS = destSSOpt.get();
 
-                                    LocalDateTime leg2Dep = LocalDateTime.of(travelDate, hubSS2.getScheduledDepartureTime()).plusDays(hubSS2.getDayOffset());
-                                    LocalDateTime leg2Arr = LocalDateTime.of(travelDate, destSS.getScheduledArrivalTime()).plusDays(destSS.getDayOffset());
+                                    LocalDateTime leg2Dep = LocalDateTime.of(searchDate, hubSS2.getScheduledDepartureTime()).plusDays(hubSS2.getDayOffset());
+                                    LocalDateTime leg2Arr = LocalDateTime.of(searchDate, destSS.getScheduledArrivalTime()).plusDays(destSS.getDayOffset());
 
                                     BigDecimal fare1 = fareRecordRepository.findByBusServiceIdAndFromStopIdAndToStopId(s1.getId(), origin.getId(), hub.getId())
                                             .map(FareRecord::getBaseFare).orElse(BigDecimal.valueOf(700.0));

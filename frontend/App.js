@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator, LogBox } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+
+// Ignore all yellow box warning banners on mobile/emulator during hackathon demo
+LogBox.ignoreAllLogs();
 import { theme } from './src/theme';
+import { demoScenarios } from './src/data/demoScenarios';
+import { DemoNoticeBanner } from './src/components';
 import {
   getInitialData,
   sendChatMessage,
@@ -17,6 +22,7 @@ import { Screen1ConversationalIntake } from './src/Screen1ConversationalIntake';
 import { Screen2ReviewDraft } from './src/Screen2ReviewDraft';
 import { Screen3Clarification } from './src/Screen3Clarification';
 import { Screen4Top4Results } from './src/Screen4Top4Results';
+import { ScreenBusSeatSelection } from './src/ScreenBusSeatSelection';
 import { Screen5ItineraryDetails } from './src/Screen5ItineraryDetails';
 import { Screen6Checkout } from './src/Screen6Checkout';
 import { Screen7DisruptionMonitor } from './src/Screen7DisruptionMonitor';
@@ -28,14 +34,35 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Communicating with backend...');
 
-  // Authoritative State
-  const [tripIntent, setTripIntent] = useState(parseIntentFromInput('', 'en'));
-  const [searchResults, setSearchResults] = useState([]);
+  // User interaction counter / Scenario Index (0-based: 0 -> place-1, 1 -> place-2, 2 -> place-3)
+  const [i, setI] = useState(0);
+
+  // Authoritative State bound to current index i
+  const currentScenario = demoScenarios[i < demoScenarios.length ? i : demoScenarios.length - 1];
+  const [tripIntent, setTripIntent] = useState(currentScenario.intent);
+  const [searchResults, setSearchResults] = useState(currentScenario.searchResults);
   const [selectedOption, setSelectedOption] = useState(null);
   const [activeItinerary, setActiveItinerary] = useState(null);
   const [disruption, setDisruption] = useState(null);
   const [recoveryProposals, setRecoveryProposals] = useState([]);
   const [activeProposal, setActiveProposal] = useState(null);
+
+  // Sync state whenever scenario index i changes
+  useEffect(() => {
+    const activeSc = demoScenarios[i < demoScenarios.length ? i : demoScenarios.length - 1];
+    setTripIntent(activeSc.intent);
+    setSearchResults(activeSc.searchResults);
+    setSelectedOption(null);
+    setActiveItinerary(null);
+  }, [i]);
+
+  // Demo Replay Handler (resets i to 0)
+  const handleReplayDemo = () => {
+    setI(0);
+    setCurrentStage(1);
+    setSelectedOption(null);
+    setActiveItinerary(null);
+  };
 
   // Load initial system data on app boot
   useEffect(() => {
@@ -53,27 +80,23 @@ export default function App() {
     setLanguage(prev => (prev === 'en' ? 'te' : 'en'));
   };
 
-  // Stage 1 -> 2: Extract Trip Intent via API
+  // Stage 1 -> 2: Triggered ONLY when user types or uses voice input
   const handleExtractTrip = async (inputPrompt) => {
     setIsLoading(true);
     setLoadingMessage(language === 'te' 
-      ? '🤖 Groq AI ద్వారా ప్రయాణ వివరాలు అన్వయిస్తోంది...' 
-      : '🤖 Analyzing travel request with Groq AI...');
-    try {
-      const res = await sendChatMessage(inputPrompt, language);
-      if (res && res.intent) {
-        setTripIntent(res.intent);
-      } else {
-        const extracted = parseIntentFromInput(inputPrompt, language);
-        setTripIntent(extracted);
-      }
-    } catch (e) {
-      const extracted = parseIntentFromInput(inputPrompt, language);
-      setTripIntent(extracted);
-    } finally {
-      setIsLoading(false);
-      setCurrentStage(2); // Auto-navigate directly from Screen 1 to Screen 2
-    }
+      ? '🤖 డెమో మోడ్: అభ్యర్థనను విశ్లేషిస్తోంది...' 
+      : '🤖 Processing travel request...');
+
+    // 1. Use the current scenario details (place-1 for i=0, place-2 for i=1, etc.)
+    const activeSc = demoScenarios[i < demoScenarios.length ? i : demoScenarios.length - 1];
+    setTripIntent(activeSc.intent);
+    setSearchResults(activeSc.searchResults);
+
+    // 2. Increment scenario index i AFTER user interaction for the next request
+    setI(prevI => (prevI < demoScenarios.length - 1 ? prevI + 1 : prevI));
+
+    setIsLoading(false);
+    setCurrentStage(2); // Auto-navigate to Stage 2 review screen with active scenario details
   };
 
   // Stage 2 -> 4: Confirm Draft & Search Routes via API
@@ -116,10 +139,20 @@ export default function App() {
     }
   };
 
-  // Stage 4 -> 5: Select Option
+  // Stage 4 -> Seat Selection: Select Bus Option
   const handleSelectOption = (option) => {
     setSelectedOption(option);
-    setCurrentStage(5);
+    setCurrentStage(45); // Stage 4.5: Interactive Bus Seat Selection
+  };
+
+  // Confirm Seat Selection
+  const handleConfirmSeats = ({ bus, selectedSeats, totalFare }) => {
+    setSelectedOption(prev => ({
+      ...prev,
+      selectedSeats,
+      totalFare: totalFare > 0 ? totalFare : prev?.totalFare
+    }));
+    setCurrentStage(5); // Proceed to Itinerary Details
   };
 
   // Stage 5 -> 6: Proceed to Checkout
@@ -229,11 +262,14 @@ export default function App() {
 
       {/* Main Viewport Router */}
       <View style={styles.container}>
+        <DemoNoticeBanner />
+
         {currentStage === 1 && (
           <Screen1ConversationalIntake
             onExtractTrip={handleExtractTrip}
             language={language}
             onToggleLanguage={toggleLanguage}
+            currentScenario={currentScenario}
           />
         )}
 
@@ -242,6 +278,7 @@ export default function App() {
             intent={tripIntent}
             onProceedToClarification={handleGoToClarification}
             onConfirmAndSearch={handleConfirmDraftAndSearch}
+            onBackToIntake={() => setCurrentStage(1)}
             language={language}
             onToggleLanguage={toggleLanguage}
           />
@@ -259,7 +296,18 @@ export default function App() {
         {currentStage === 4 && (
           <Screen4Top4Results
             options={searchResults}
+            tripIntent={tripIntent}
             onSelectOption={handleSelectOption}
+            language={language}
+            onToggleLanguage={toggleLanguage}
+          />
+        )}
+
+        {currentStage === 45 && selectedOption && (
+          <ScreenBusSeatSelection
+            bus={selectedOption}
+            onConfirmSeats={handleConfirmSeats}
+            onBack={() => setCurrentStage(4)}
             language={language}
             onToggleLanguage={toggleLanguage}
           />

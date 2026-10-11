@@ -1,31 +1,29 @@
 server:
-  port: 8080
+  port: 5000
+  address: 0.0.0.0
 
 spring:
   application:
     name: roamagent-backend
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/roamagent?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:root123}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:h2:mem:roamagent;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
   jpa:
     hibernate:
-      ddl-auto: validate
-    show-sql: false
+      ddl-auto: create-drop
+    show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
-    baseline-on-migrate: true
-    clean-disabled: false
-    clean-on-validation-error: true
+        dialect: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: true
 
 groq:
   api:
-    key: ${GROQ_API_KEY:}
+    key: ${GROQ_API_KEY:your_groq_api_key_here}
     model: llama-3.1-8b-instant
     base-url: https://api.groq.com/openai/v1
 

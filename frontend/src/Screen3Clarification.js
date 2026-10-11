@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 
 import { theme } from './theme';
 import { DemoHeader } from './components';
 
-export function Screen3Clarification({ intent, onSaveAndSearch, language, onToggleLanguage }) {
+export function Screen3Clarification({ intent, onSaveAndSearch, language = 'en', onToggleLanguage = () => {} }) {
   const isTe = language === 'te';
 
   const [budget, setBudget] = useState(intent.maxBudgetINR ? String(intent.maxBudgetINR) : '1500');

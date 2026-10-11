@@ -33,39 +33,100 @@ public class TripController {
                 byte[] audioBytes = java.util.Base64.getDecoder().decode(base64Audio);
                 String transcript = orchestratorService.getConversationAgent().getGroqApiClient().transcribeAudio(audioBytes, "recording.m4a");
                 if (transcript != null && !transcript.trim().isEmpty()) {
-                    return Map.of("status", "SUCCESS", "transcript", transcript, "language", language);
+                    return Map.of("status", "SUCCESS", "transcript", transcript, "language", language, "source", "GROQ_WHISPER_LIVE");
                 }
             } catch (Exception e) {
                 // Fallthrough to fallback
             }
         }
 
-        // Default Telugu / English STT fallback transcript when audio is mock or unparseable
-        String fallbackText = "te".equalsIgnoreCase(language)
-                ? "రేపు ఉదయం 9 గంటలలోపు విశాఖపట్నం నుంచి హైదరాబాద్ చేరాలి. నా బడ్జెట్ ₹1,500. ఏసీ స్లీపర్ బస్సు కావాలి."
-                : "I need to travel from Vizag to Hyderabad tomorrow. I must reach before 9 AM. My budget is ₹1,500, and I prefer an AC sleeper.";
+        return Map.of(
+                "status", "ERROR",
+                "message", "Speech transcription unavailable. Please check backend Groq key configuration or provide typed input.",
+                "language", language,
+                "source", "STT_UNAVAILABLE"
+        );
+    }
 
-        return Map.of("status", "SUCCESS", "transcript", fallbackText, "language", language, "source", "FALLBACK_STT");
+    @PostMapping(value = "/voice/stt/file", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Map<String, Object> speechToTextFile(
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(value = "language", defaultValue = "en") String language) {
+        if (file != null && !file.isEmpty()) {
+            try {
+                byte[] audioBytes = file.getBytes();
+                String originalFilename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "recording.m4a";
+                String transcript = orchestratorService.getConversationAgent().getGroqApiClient().transcribeAudio(audioBytes, originalFilename);
+                if (transcript != null && !transcript.trim().isEmpty()) {
+                    return Map.of(
+                            "status", "SUCCESS",
+                            "transcript", transcript,
+                            "language", language,
+                            "source", "GROQ_WHISPER_LIVE"
+                    );
+                }
+            } catch (Exception e) {
+                // Fallthrough
+            }
+        }
+
+        return Map.of(
+                "status", "ERROR",
+                "message", "Failed to process audio file or Groq transcription API unavailable.",
+                "language", language,
+                "source", "STT_UNAVAILABLE"
+        );
     }
 
     @PostMapping("/trip-intent/extract")
     public ExtractIntentResponse extractIntent(@RequestBody ExtractIntentRequest request) {
+        String convId = request.getConversationId() != null && !request.getConversationId().isBlank()
+                ? request.getConversationId()
+                : UUID.randomUUID().toString();
+
+        // Multi-turn session context retrieval if prior intent exists for this conversation
+        TripIntent existingIntent = tripIntentRepository.findByConversationId(convId).orElse(null);
+
         var draft = orchestratorService.getIntakeAgent().extractIntent(request.getRawInput());
+
+        // Merge fields if existing intent exists (follow-up/modification)
+        if (existingIntent != null) {
+            if (draft.getOriginCity() == null) draft.setOriginCity(existingIntent.getOriginCity());
+            if (draft.getDestinationCity() == null) draft.setDestinationCity(existingIntent.getDestinationCity());
+            if (draft.getTravelDate() == null) draft.setTravelDate(existingIntent.getTravelDate());
+            if (draft.getArrivalDeadline() == null) draft.setArrivalDeadline(existingIntent.getArrivalDeadline());
+            if (draft.getMaxBusBudget() == null) draft.setMaxBusBudget(existingIntent.getMaxBudget());
+            if (draft.getPreferredBusMode() == null) draft.setPreferredBusMode(existingIntent.getPreferredMode());
+            if (draft.getHotelDestination() == null) draft.setHotelDestination(existingIntent.getHotelDestination());
+            if (draft.getCheckInDate() == null) draft.setCheckInDate(existingIntent.getCheckInDate());
+            if (draft.getStayNights() == null) draft.setStayNights(existingIntent.getStayNights());
+            if (draft.getMaxHotelBudgetPerNight() == null) draft.setMaxHotelBudgetPerNight(existingIntent.getMaxHotelBudgetPerNight());
+            if (draft.getMinHotelRating() == null) draft.setMinHotelRating(existingIntent.getMinHotelRating());
+        }
+
         var clarification = orchestratorService.getClarificationAgent().evaluateDraft(draft);
 
         String intentId = UUID.randomUUID().toString();
-        String convId = request.getConversationId() != null ? request.getConversationId() : UUID.randomUUID().toString();
 
         TripIntent savedIntent = TripIntent.builder()
                 .id(intentId)
                 .conversationId(convId)
+                .intentType(draft.getIntentType())
                 .originCity(draft.getOriginCity())
                 .destinationCity(draft.getDestinationCity())
+                .locality(draft.getLocality())
                 .travelDate(draft.getTravelDate())
                 .arrivalDeadline(draft.getArrivalDeadline())
-                .maxBudget(draft.getMaxBudget())
-                .preferredMode(draft.getPreferredMode())
+                .maxBudget(draft.getMaxBusBudget())
+                .preferredMode(draft.getPreferredBusMode())
                 .passengerCount(draft.getPassengerCount())
+                .hotelDestination(draft.getHotelDestination())
+                .checkInDate(draft.getCheckInDate())
+                .checkOutDate(draft.getCheckOutDate())
+                .stayNights(draft.getStayNights())
+                .roomCount(draft.getRoomCount())
+                .maxHotelBudgetPerNight(draft.getMaxHotelBudgetPerNight())
+                .minHotelRating(draft.getMinHotelRating())
                 .languagePreference(request.getUserLanguage())
                 .isClarified(clarification.isClarified())
                 .build();
@@ -73,13 +134,24 @@ public class TripController {
         tripIntentRepository.save(savedIntent);
 
         DraftIntentDto draftDto = DraftIntentDto.builder()
+                .intentType(draft.getIntentType())
                 .originCity(draft.getOriginCity())
                 .destinationCity(draft.getDestinationCity())
+                .locality(draft.getLocality())
                 .travelDate(draft.getTravelDate())
                 .arrivalDeadline(draft.getArrivalDeadline())
-                .maxBudget(draft.getMaxBudget())
-                .preferredMode(draft.getPreferredMode())
+                .maxBusBudget(draft.getMaxBusBudget())
+                .preferredBusMode(draft.getPreferredBusMode())
                 .passengerCount(draft.getPassengerCount())
+                .hotelDestination(draft.getHotelDestination())
+                .checkInDate(draft.getCheckInDate())
+                .checkOutDate(draft.getCheckOutDate())
+                .stayNights(draft.getStayNights())
+                .roomCount(draft.getRoomCount())
+                .maxHotelBudgetPerNight(draft.getMaxHotelBudgetPerNight())
+                .maxHotelTotalBudget(draft.getMaxHotelTotalBudget())
+                .minHotelRating(draft.getMinHotelRating())
+                .preferredAmenities(draft.getPreferredAmenities())
                 .build();
 
         ClarificationQuestionDto questionDto = null;
@@ -91,12 +163,17 @@ public class TripController {
                     .build();
         }
 
+        String summary = orchestratorService.getConversationAgent().generateConversationalSummary(draft, request.getUserLanguage());
+
         return ExtractIntentResponse.builder()
                 .intentId(savedIntent.getId())
+                .conversationId(convId)
+                .intentType(draft.getIntentType())
                 .status(clarification.isClarified() ? "CLARIFIED" : "REQUIRES_CLARIFICATION")
                 .draftIntent(draftDto)
                 .missingFields(clarification.getMissingFields())
                 .clarificationQuestion(questionDto)
+                .conversationalSummary(summary)
                 .build();
     }
 }
